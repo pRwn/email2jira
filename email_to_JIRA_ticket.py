@@ -431,12 +431,13 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
         )
 
         # Add embedded objects as attachments
-        for embedded_obj in embedded_objects:
-            jira_client.add_attachment(
-                jira_issue.key,
-                embedded_obj['filename'],
-                embedded_obj['content']
-            )
+        if embedded_objects:
+            for embedded_obj in embedded_objects:
+                jira_client.add_attachment(
+                    jira_issue.key,
+                    embedded_obj['filename'],
+                    embedded_obj['content']
+                )
 
         # Get and attach files from email attachments
         if email_message.get('hasAttachments'):
