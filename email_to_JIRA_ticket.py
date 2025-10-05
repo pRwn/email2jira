@@ -24,6 +24,9 @@ from config import (
     FOLDER_NAME, BATCH_SIZE
 )
 
+# Import email utilities
+from email_utils import extract_embedded_objects_from_email
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -366,19 +369,19 @@ class JiraTicketCreator:
             logger.error(f"Error adding attachment {filename}: {e}")
 
 
-def extract_email_body(email_message: Dict) -> str:
-    """Extract plain text body from email message"""
+def extract_email_body(email_message: Dict) -> tuple[str, List[Dict]]:
+    """
+    Extract email body and any embedded objects
+
+    Returns:
+        Tuple of (body_content, embedded_objects)
+    """
     body = email_message.get('body', {})
-    content = body.get('content', '')
-    content_type = body.get('contentType', 'text')
-    
-    # JIRA supports some HTML, but let's keep it clean
-    if content_type == 'html':
-        # For better HTML parsing, you could use BeautifulSoup
-        # For now, return as-is
-        return content
-    
-    return content
+
+    # Extract embedded objects and get cleaned content
+    cleaned_content, embedded_objects = extract_embedded_objects_from_email(body)
+
+    return cleaned_content, embedded_objects
 
 
 def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketCreator, 
@@ -405,8 +408,8 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
             # Continue processing even if userid lookup fails
             userid = None
 
-        # Extract body
-        body = extract_email_body(email_message)
+        # Extract body and embedded objects
+        body, embedded_objects = extract_email_body(email_message)
 
         # Prepare description with metadata
         userid_info = f"\n*User ID:* {userid}" if userid else ""
@@ -418,7 +421,7 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
 
 {body}
 """
-        
+
         # Create JIRA ticket
         jira_issue = jira_client.create_ticket(
             summary=subject,
@@ -426,8 +429,16 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
             project_key=JIRA_PROJECT_KEY,
             userid=userid
         )
-        
-        # Get and attach files
+
+        # Add embedded objects as attachments
+        for embedded_obj in embedded_objects:
+            jira_client.add_attachment(
+                jira_issue.key,
+                embedded_obj['filename'],
+                embedded_obj['content']
+            )
+
+        # Get and attach files from email attachments
         if email_message.get('hasAttachments'):
             attachments = graph_client.get_attachments(message_id)
             for attachment in attachments:
