@@ -5,15 +5,23 @@ Processes emails from Exchange Online and creates JIRA tickets
 Uses MSAL with ROPC (Resource Owner Password Credentials) flow
 """
 
-import os
 import logging
 from datetime import datetime
 from typing import List, Dict, Any
 import requests
 from jira import JIRA
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 import base64
 import msal
+import os
+
+# Import configuration
+from config import (
+    TENANT_ID, CLIENT_ID, CLIENT_SECRET,
+    MAILBOX_USER, MAILBOX_PASSWORD,
+    JIRA_URL, JIRA_USER, JIRA_PASSWORD, JIRA_PROJECT_KEY,
+    FOLDER_NAME, BATCH_SIZE
+)
 
 # Configure logging
 logging.basicConfig(
@@ -27,129 +35,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# CONFIGURATION - Set these via environment variables or update here
+# JINJA2 TEMPLATE SETUP
 # ============================================================================
 
-# Microsoft Graph API Configuration
-TENANT_ID = os.getenv('TENANT_ID', 'your-tenant-id')
-CLIENT_ID = os.getenv('CLIENT_ID', 'your-client-id')
-CLIENT_SECRET = os.getenv('CLIENT_SECRET', 'your-client-secret')
-MAILBOX_USER = os.getenv('MAILBOX_USER', 'user@domain.com')
-MAILBOX_PASSWORD = os.getenv('MAILBOX_PASSWORD', 'mailbox-password')
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# JIRA Configuration
-JIRA_URL = os.getenv('JIRA_URL', 'https://your-company.atlassian.net')
-JIRA_USER = os.getenv('JIRA_USER', 'jira-user@domain.com')
-JIRA_PASSWORD = os.getenv('JIRA_PASSWORD', 'jira-password')
-JIRA_PROJECT_KEY = 'IAM'
-
-# Processing Configuration
-FOLDER_NAME = '#As_JIRA_Ticket'
-BATCH_SIZE = int(os.getenv('BATCH_SIZE', '10'))  # Max emails per run
-
-# ============================================================================
-# EMAIL TEMPLATE
-# ============================================================================
-
-EMAIL_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #f4f4f4;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            margin: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px 8px 0 0;
-            margin: -30px -30px 20px -30px;
-        }
-        .ticket-box {
-            background-color: #f8f9fa;
-            border-left: 4px solid #0052CC;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .ticket-id {
-            font-size: 24px;
-            font-weight: bold;
-            color: #0052CC;
-            margin: 10px 0;
-        }
-        .info-box {
-            background-color: #E3FCEF;
-            border: 1px solid #00875A;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            font-size: 12px;
-            color: #666;
-        }
-        a {
-            color: #0052CC;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 style="margin: 0;">✓ Request Confirmed</h1>
-        </div>
-        
-        <p>Dear {{ sender_name }},</p>
-        
-        <p>Thank you for your request. Your email has been successfully converted into a JIRA ticket for tracking and processing.</p>
-        
-        <div class="ticket-box">
-            <div>Your Ticket ID:</div>
-            <div class="ticket-id">{{ ticket_key }}</div>
-            <div style="margin-top: 10px;">
-                <strong>Summary:</strong> {{ ticket_summary }}
-            </div>
-        </div>
-        
-        <div class="info-box">
-            <strong>📌 Important:</strong> Please use the JIRA ticket for all further communication regarding this request. 
-            Do not reply to this email.
-        </div>
-        
-        <p>You can view and update your ticket here:<br>
-        <a href="{{ ticket_url }}" style="font-weight: bold;">{{ ticket_url }}</a></p>
-        
-        <p>Our team will review your request and provide updates in the ticket.</p>
-        
-        <div class="footer">
-            <p>This is an automated message from the IAM Team.<br>
-            Generated on {{ timestamp }}</p>
-        </div>
-    </div>
-</body>
-</html>
-"""
+# Set up Jinja2 environment to load templates from the script directory
+jinja_env = Environment(loader=FileSystemLoader(SCRIPT_DIR))
 
 
 class GraphAPIClient:
@@ -438,7 +331,7 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
                     jira_client.add_attachment(jira_issue.key, filename, content_bytes)
         
         # Send confirmation email
-        template = Template(EMAIL_TEMPLATE)
+        template = jinja_env.get_template('email_template.html')
         html_body = template.render(
             sender_name=sender_name,
             ticket_key=jira_issue.key,

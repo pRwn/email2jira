@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            margin: -30px -30px 20px -30px;
+        }
+        .ticket-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0052CC;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .ticket-id {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0052CC;
+            margin: 10px 0;
+        }
+        .info-box {
+            background-color: #E3FCEF;
+            border: 1px solid #00875A;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+        a {
+            color: #0052CC;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0;">✓ Request Confirmed</h1>
+        </div>
+
+        <p>Dear {{ sender_name }},</p>
+
+        <p>Thank you for your request. Your email has been successfully converted into a JIRA ticket for tracking and processing.</p>
+
+        <div class="ticket-box">
+            <div>Your Ticket ID:</div>
+            <div class="ticket-id">{{ ticket_key }}</div>
+            <div style="margin-top: 10px;">
+                <strong>Summary:</strong> {{ ticket_summary }}
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>📌 Important:</strong> Please use the JIRA ticket for all further communication regarding this request.
+            Do not reply to this email.
+        </div>
+
+        <p>You can view and update your ticket here:<br>
+        <a href="{{ ticket_url }}" style="font-weight: bold;">{{ ticket_url }}</a></p>
+
+        <p>Our team will review your request and provide updates in the ticket.</p>
+
+        <div class="footer">
+            <p>This is an automated message from the IAM Team.<br>
+            Generated on {{ timestamp }}</p>
+        </div>
+    </div>
+</body>
+</html>
