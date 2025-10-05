@@ -220,17 +220,66 @@ class GraphAPIClient:
     def move_message(self, message_id: str, destination_folder_id: str):
         """Move a message to another folder"""
         url = f'{self.graph_endpoint}/me/messages/{message_id}/move'
-        
+
         data = {
             'destinationId': destination_folder_id
         }
-        
+
         try:
             response = requests.post(url, headers=self._get_headers(), json=data)
             response.raise_for_status()
             logger.info(f"Message {message_id} moved successfully")
         except Exception as e:
             logger.error(f"Error moving message: {e}")
+
+    def get_userid_from_email(self, email: str) -> str:
+        """
+        Get user ID from email address using Graph API
+
+        Args:
+            email: Email address to lookup
+
+        Returns:
+            User ID (part before @ in userPrincipalName)
+
+        Raises:
+            Exception: If user not found or multiple users found
+        """
+        url = f"{self.graph_endpoint}/users"
+        params = {
+            '$filter': f"mail eq '{email}'",
+            '$select': 'userPrincipalName'
+        }
+
+        try:
+            response = requests.get(url, headers=self._get_headers(), params=params)
+            response.raise_for_status()
+            users = response.json().get('value', [])
+
+            if len(users) == 0:
+                logger.error(f"No user found with email: {email}")
+                raise Exception(f"No user found with email: {email}")
+
+            if len(users) > 1:
+                logger.error(f"Multiple users found with email: {email}")
+                raise Exception(f"Multiple users found with email: {email}")
+
+            # Extract user ID from userPrincipalName (part before @)
+            user_principal_name = users[0].get('userPrincipalName', '')
+            if '@' not in user_principal_name:
+                logger.error(f"Invalid userPrincipalName format: {user_principal_name}")
+                raise Exception(f"Invalid userPrincipalName format: {user_principal_name}")
+
+            userid = user_principal_name.split('@')[0]
+            logger.info(f"Successfully extracted userid '{userid}' from email '{email}'")
+            return userid
+
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error getting user ID for {email}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error getting user ID for {email}: {e}")
+            raise
 
 
 class JiraTicketCreator:
@@ -240,7 +289,7 @@ class JiraTicketCreator:
         self.jira = JIRA(server=jira_url, basic_auth=(username, password))
         logger.info("Connected to JIRA successfully")
     
-    def create_ticket(self, summary: str, description: str, project_key: str = 'IAM') -> Any:
+    def create_ticket(self, summary: str, description: str, project_key: str = 'IAM', userid: str = None) -> Any:
         """Create a JIRA ticket"""
         issue_dict = {
             'project': {'key': project_key},
@@ -248,6 +297,10 @@ class JiraTicketCreator:
             'description': description,
             'issuetype': {'name': 'Task'}
         }
+
+        # Add custom field for userid if provided
+        if userid:
+            issue_dict['customfield_12804'] = {'name': userid}
         
         try:
             issue = self.jira.create_issue(fields=issue_dict)
@@ -298,14 +351,24 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
         sender_name = sender.get('name', sender_email)
         message_id = email_message['id']
         received_date = email_message.get('receivedDateTime', '')
-        
+
         logger.info(f"Processing email from {sender_email}: {subject}")
-        
+
+        # Get user ID from email address
+        try:
+            userid = graph_client.get_userid_from_email(sender_email)
+            logger.info(f"Retrieved userid: {userid} for email: {sender_email}")
+        except Exception as e:
+            logger.error(f"Failed to get userid for {sender_email}: {e}")
+            # Continue processing even if userid lookup fails
+            userid = None
+
         # Extract body
         body = extract_email_body(email_message)
-        
+
         # Prepare description with metadata
-        description = f"""*Original Email from:* {sender_name} <{sender_email}>
+        userid_info = f"\n*User ID:* {userid}" if userid else ""
+        description = f"""*Original Email from:* {sender_name} <{sender_email}>{userid_info}
 *Received:* {received_date}
 *Subject:* {subject}
 
@@ -318,7 +381,8 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
         jira_issue = jira_client.create_ticket(
             summary=subject,
             description=description,
-            project_key=JIRA_PROJECT_KEY
+            project_key=JIRA_PROJECT_KEY,
+            userid=userid
         )
         
         # Get and attach files
