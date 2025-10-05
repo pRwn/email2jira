@@ -7,13 +7,14 @@ Uses MSAL with ROPC (Resource Owner Password Credentials) flow
 
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import requests
 from jira import JIRA
 from jinja2 import Environment, FileSystemLoader
 import base64
 import msal
 import os
+import csv
 
 # Import configuration
 from config import (
@@ -232,9 +233,43 @@ class GraphAPIClient:
         except Exception as e:
             logger.error(f"Error moving message: {e}")
 
+    def _lookup_userid_in_cache(self, email: str, cache_file: str = 'email2userid.csv') -> Optional[str]:
+        """
+        Look up user ID in CSV cache file
+
+        Args:
+            email: Email address to lookup
+            cache_file: Path to CSV cache file
+
+        Returns:
+            User ID if found in cache, None otherwise
+        """
+        cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), cache_file)
+
+        if not os.path.exists(cache_path):
+            logger.debug(f"Cache file not found: {cache_path}")
+            return None
+
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get('email', '').lower() == email.lower():
+                        userid = row.get('userid', '').strip()
+                        if userid:
+                            logger.info(f"Found userid '{userid}' for email '{email}' in cache")
+                            return userid
+
+            logger.debug(f"Email '{email}' not found in cache")
+            return None
+
+        except Exception as e:
+            logger.warning(f"Error reading cache file: {e}")
+            return None
+
     def get_userid_from_email(self, email: str) -> str:
         """
-        Get user ID from email address using Graph API
+        Get user ID from email address, checking CSV cache first, then Graph API
 
         Args:
             email: Email address to lookup
@@ -245,6 +280,13 @@ class GraphAPIClient:
         Raises:
             Exception: If user not found or multiple users found
         """
+        # First, try to get userid from CSV cache
+        userid = self._lookup_userid_in_cache(email)
+        if userid:
+            return userid
+
+        # If not in cache, query Graph API
+        logger.info(f"Email '{email}' not in cache, querying Graph API...")
         url = f"{self.graph_endpoint}/users"
         params = {
             '$filter': f"mail eq '{email}'",
@@ -271,7 +313,7 @@ class GraphAPIClient:
                 raise Exception(f"Invalid userPrincipalName format: {user_principal_name}")
 
             userid = user_principal_name.split('@')[0]
-            logger.info(f"Successfully extracted userid '{userid}' from email '{email}'")
+            logger.info(f"Successfully extracted userid '{userid}' from email '{email}' via Graph API")
             return userid
 
         except requests.exceptions.HTTPError as e:

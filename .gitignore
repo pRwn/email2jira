@@ -151,3 +151,4 @@ Thumbs.db
 # Project specific
 config.py
 email_to_jira.log
+email2userid.csv
