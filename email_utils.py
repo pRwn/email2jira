@@ -61,8 +61,8 @@ def extract_embedded_images(html_body: str) -> Tuple[str, List[Dict[str, any]]]:
                         'content_type': f'image/{image_type}'
                     })
 
-                    # Replace img tag with placeholder or remove
-                    img.replace_with(f"[Embedded Image: {filename}]")
+                    # Replace img tag with JIRA image syntax
+                    img.replace_with(f"!{filename}|thumbnail!")
 
                     logger.info(f"Extracted embedded base64 image: {filename}")
 
@@ -75,8 +75,10 @@ def extract_embedded_images(html_body: str) -> Tuple[str, List[Dict[str, any]]]:
             # We'll just note them here - they should be in the message attachments
             cid = src.replace('cid:', '')
             logger.info(f"Found CID referenced image: {cid} (should be in attachments)")
-            # Replace with placeholder
-            img.replace_with(f"[Image: {cid}]")
+            # Replace with JIRA image syntax - extract clean filename from CID
+            # CID format is often like "image002.png@01DB1234.5678ABCD"
+            clean_filename = cid.split('@')[0] if '@' in cid else cid
+            img.replace_with(f"!{clean_filename}|thumbnail!")
 
     # Convert back to HTML string
     cleaned_html = str(soup)
@@ -123,6 +125,30 @@ def convert_html_to_jira_markup(html_content: str) -> str:
     soup = BeautifulSoup(html_content, 'html.parser')
 
     # Convert common HTML tags to JIRA markup
+    # Images (in case any weren't already converted)
+    for img in soup.find_all('img'):
+        src = img.get('src', '')
+        alt = img.get('alt', '')
+
+        # Extract filename from src
+        if src:
+            # Handle various URL formats
+            if '/' in src:
+                filename = src.split('/')[-1]
+            else:
+                filename = src
+
+            # Clean up query params and fragments
+            filename = filename.split('?')[0].split('#')[0]
+
+            # Use alt text if available, otherwise use filename
+            if alt:
+                img.replace_with(f"!{filename}|alt={alt},thumbnail!")
+            else:
+                img.replace_with(f"!{filename}|thumbnail!")
+        else:
+            img.replace_with(alt if alt else '[Image]')
+
     # Headers
     for i in range(1, 7):
         for tag in soup.find_all(f'h{i}'):
