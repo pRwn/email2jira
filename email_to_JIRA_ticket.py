@@ -3,6 +3,7 @@
 Email to JIRA Ticket Converter
 Processes emails from Exchange Online and creates JIRA tickets
 Uses MSAL with ROPC (Resource Owner Password Credentials) flow
+Admin Consent already given
 """
 
 import logging
