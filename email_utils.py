@@ -102,3 +102,109 @@ def extract_embedded_objects_from_email(email_body: Dict) -> Tuple[str, List[Dic
 
     # For plain text, no embedded objects
     return content, []
+
+
+def convert_html_to_jira_markup(html_content: str) -> str:
+    """
+    Convert HTML content to JIRA markup format
+
+    JIRA supports its own wiki-style markup language. This function converts
+    common HTML elements to their JIRA equivalents.
+
+    Args:
+        html_content: HTML string to convert
+
+    Returns:
+        JIRA markup formatted string
+    """
+    if not html_content:
+        return ''
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Convert common HTML tags to JIRA markup
+    # Headers
+    for i in range(1, 7):
+        for tag in soup.find_all(f'h{i}'):
+            tag.replace_with(f'h{i}. {tag.get_text()}\n')
+
+    # Bold
+    for tag in soup.find_all(['b', 'strong']):
+        tag.replace_with(f'*{tag.get_text()}*')
+
+    # Italic
+    for tag in soup.find_all(['i', 'em']):
+        tag.replace_with(f'_{tag.get_text()}_')
+
+    # Underline
+    for tag in soup.find_all('u'):
+        tag.replace_with(f'+{tag.get_text()}+')
+
+    # Strikethrough
+    for tag in soup.find_all(['s', 'strike', 'del']):
+        tag.replace_with(f'-{tag.get_text()}-')
+
+    # Links
+    for tag in soup.find_all('a'):
+        href = tag.get('href', '')
+        text = tag.get_text()
+        if href:
+            tag.replace_with(f'[{text}|{href}]')
+        else:
+            tag.replace_with(text)
+
+    # Unordered lists
+    for ul in soup.find_all('ul'):
+        items = []
+        for li in ul.find_all('li', recursive=False):
+            items.append(f'* {li.get_text().strip()}')
+        ul.replace_with('\n' + '\n'.join(items) + '\n')
+
+    # Ordered lists
+    for ol in soup.find_all('ol'):
+        items = []
+        for idx, li in enumerate(ol.find_all('li', recursive=False), 1):
+            items.append(f'# {li.get_text().strip()}')
+        ol.replace_with('\n' + '\n'.join(items) + '\n')
+
+    # Code blocks
+    for tag in soup.find_all('pre'):
+        code_text = tag.get_text()
+        tag.replace_with(f'{{code}}\n{code_text}\n{{code}}\n')
+
+    # Inline code
+    for tag in soup.find_all('code'):
+        if tag.parent.name != 'pre':  # Skip if already inside pre
+            tag.replace_with(f'{{{{{tag.get_text()}}}}}')
+
+    # Blockquotes
+    for tag in soup.find_all('blockquote'):
+        lines = tag.get_text().strip().split('\n')
+        quoted = '\n'.join([f'bq. {line}' for line in lines])
+        tag.replace_with(f'\n{quoted}\n')
+
+    # Line breaks
+    for br in soup.find_all('br'):
+        br.replace_with('\n')
+
+    # Paragraphs
+    for p in soup.find_all('p'):
+        p.replace_with(f'\n{p.get_text()}\n')
+
+    # Divs (just extract text with newlines)
+    for div in soup.find_all('div'):
+        div.replace_with(f'\n{div.get_text()}\n')
+
+    # Extract text and clean up
+    text = soup.get_text()
+
+    # Clean up excessive newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # Clean up excessive spaces
+    text = re.sub(r' {2,}', ' ', text)
+
+    # Strip leading/trailing whitespace
+    text = text.strip()
+
+    return text

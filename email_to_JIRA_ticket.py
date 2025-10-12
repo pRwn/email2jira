@@ -25,7 +25,7 @@ from config import (
 )
 
 # Import email utilities
-from email_utils import extract_embedded_objects_from_email
+from email_utils import extract_embedded_objects_from_email, convert_html_to_jira_markup
 
 # Configure logging
 logging.basicConfig(
@@ -411,6 +411,9 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
         # Extract body and embedded objects
         body, embedded_objects = extract_email_body(email_message)
 
+        # Convert HTML body to JIRA markup
+        jira_body = convert_html_to_jira_markup(body)
+
         # Prepare description with metadata
         userid_info = f"\n*User ID:* {userid}" if userid else ""
         description = f"""*Original Email from:* {sender_name} <{sender_email}>{userid_info}
@@ -419,7 +422,7 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
 
 ----
 
-{body}
+{jira_body}
 """
 
         # Create JIRA ticket
