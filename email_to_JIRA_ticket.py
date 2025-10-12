@@ -22,7 +22,7 @@ from config import (
     TENANT_ID, CLIENT_ID, CLIENT_SECRET,
     MAILBOX_USER, MAILBOX_PASSWORD,
     JIRA_URL, JIRA_USER, JIRA_PASSWORD, JIRA_PROJECT_KEY,
-    FOLDER_NAME, BATCH_SIZE
+    FOLDER_NAME, FOLDER_NAME_ARCHIVE, BATCH_SIZE
 )
 
 # Import email utilities
@@ -385,8 +385,8 @@ def extract_email_body(email_message: Dict) -> tuple[str, List[Dict]]:
     return cleaned_content, embedded_objects
 
 
-def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketCreator, 
-                          email_message: Dict):
+def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketCreator,
+                          email_message: Dict, archive_folder_id: str):
     """Process a single email and create a JIRA ticket"""
     
     try:
@@ -467,10 +467,10 @@ def process_email_to_jira(graph_client: GraphAPIClient, jira_client: JiraTicketC
             subject=f"Your request has been converted to ticket {jira_issue.key}",
             html_body=html_body
         )
-        
-        # Delete the processed email from the folder
-        graph_client.delete_message(message_id)
-        
+
+        # Move the processed email to archive folder (only if ticket creation was successful)
+        graph_client.move_message(message_id, archive_folder_id)
+
         logger.info(f"Successfully processed email and created ticket {jira_issue.key}")
         return True
         
@@ -497,23 +497,28 @@ def main():
         
         jira_client = JiraTicketCreator(JIRA_URL, JIRA_USER, JIRA_PASSWORD)
         
-        # Get folder ID
+        # Get folder IDs
         folder_id = graph_client.get_folder_id(FOLDER_NAME)
         if not folder_id:
             logger.error(f"Could not find folder '{FOLDER_NAME}'")
             return
-        
+
+        archive_folder_id = graph_client.get_folder_id(FOLDER_NAME_ARCHIVE)
+        if not archive_folder_id:
+            logger.error(f"Could not find archive folder '{FOLDER_NAME_ARCHIVE}'")
+            return
+
         # Get messages
         messages = graph_client.get_messages_from_folder(folder_id, BATCH_SIZE)
-        
+
         if not messages:
             logger.info("No messages to process")
             return
-        
+
         # Process each message
         success_count = 0
         for message in messages:
-            if process_email_to_jira(graph_client, jira_client, message):
+            if process_email_to_jira(graph_client, jira_client, message, archive_folder_id):
                 success_count += 1
         
         logger.info(f"Processed {success_count}/{len(messages)} emails successfully")
