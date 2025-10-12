@@ -256,13 +256,16 @@ class GraphAPIClient:
 
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
+                reader = csv.DictReader(f, quoting=csv.QUOTE_ALL)
                 for row in reader:
-                    if row.get('email', '').lower() == email.lower():
-                        userid = row.get('userid', '').strip()
-                        if userid:
-                            logger.info(f"Found userid '{userid}' for email '{email}' in cache")
-                            return userid
+                    # Strip any remaining quotes and whitespace from the values
+                    email_from_csv = row.get('email', '').strip().strip('"').lower()
+                    userid_from_csv = row.get('userid', '').strip().strip('"')
+
+                    if email_from_csv == email.lower():
+                        if userid_from_csv:
+                            logger.info(f"Found userid '{userid_from_csv}' for email '{email}' in cache")
+                            return userid_from_csv
 
             logger.debug(f"Email '{email}' not found in cache")
             return None
