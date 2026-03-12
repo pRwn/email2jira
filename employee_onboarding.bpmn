@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_EmployeeOnboarding"
+                  targetNamespace="http://example.com/bpmn/employee-onboarding">
+  <bpmn:process id="Process_EmployeeOnboarding" name="Employee Onboarding" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_HR" name="HR">
+        <bpmn:flowNodeRef>StartEvent_NewHire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateWorker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MaintainDetails</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IAM" name="Identity &amp; Access Management">
+        <bpmn:flowNodeRef>Task_CreateIdentity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateAccounts</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignBirthright</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateJiraTicket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT Services">
+        <bpmn:flowNodeRef>Task_StartJiraWorkflow</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestNotebook</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_OnboardingComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_KIRA" name="Telecom / KIRA Workflow">
+        <bpmn:flowNodeRef>Task_AssignPhoneNumber</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_NewHire" name="New employee hired">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_CreateWorker" name="Create worker in Workday">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_MaintainDetails" name="Maintain onboarding details">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CreateIdentity" name="Create identity in SailPoint IIQ">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CreateAccounts" name="Create user accounts">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_AssignBirthright" name="Assign birthright permissions">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CreateJiraTicket" name="Create JIRA Onboarding Master Ticket">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_StartJiraWorkflow" name="Initiate IT onboarding workflow in JIRA">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_ParallelSplit" name="Start parallel fulfillment">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_AssignPhoneNumber" name="Assign telephone number via KIRA">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RequestNotebook" name="Request notebook for new employee">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="Gateway_ParallelJoin" name="Fulfillment complete">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:endEvent id="EndEvent_OnboardingComplete" name="Onboarding completed">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_NewHire" targetRef="Task_CreateWorker"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CreateWorker" targetRef="Task_MaintainDetails"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_MaintainDetails" targetRef="Task_CreateIdentity"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_CreateIdentity" targetRef="Task_CreateAccounts"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_CreateAccounts" targetRef="Task_AssignBirthright"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_AssignBirthright" targetRef="Task_CreateJiraTicket"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_CreateJiraTicket" targetRef="Task_StartJiraWorkflow"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_StartJiraWorkflow" targetRef="Gateway_ParallelSplit"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_ParallelSplit" targetRef="Task_AssignPhoneNumber"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_ParallelSplit" targetRef="Task_RequestNotebook"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_AssignPhoneNumber" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_RequestNotebook" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gateway_ParallelJoin" targetRef="EndEvent_OnboardingComplete"/>
+  </bpmn:process>
+</bpmn:definitions>
