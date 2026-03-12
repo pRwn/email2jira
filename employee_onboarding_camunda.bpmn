@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_EmployeeOnboarding"
+                  targetNamespace="http://example.com/bpmn/employee-onboarding">
+  <bpmn:process id="Process_EmployeeOnboarding" name="Employee Onboarding" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_HR" name="HR">
+        <bpmn:flowNodeRef>StartEvent_NewHire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateWorker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MaintainDetails</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IAM" name="Identity &amp; Access Management">
+        <bpmn:flowNodeRef>Task_CreateIdentity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateAccounts</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AssignBirthright</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateJiraTicket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT Services">
+        <bpmn:flowNodeRef>Task_StartJiraWorkflow</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestNotebook</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ParallelJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_OnboardingComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_KIRA" name="Telecom / KIRA Workflow">
+        <bpmn:flowNodeRef>Task_AssignPhoneNumber</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_NewHire" name="New employee hired">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateWorker" name="Create worker in Workday">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_MaintainDetails" name="Maintain onboarding details">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CreateIdentity" name="Create identity in SailPoint IIQ">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CreateAccounts" name="Create user accounts">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_AssignBirthright" name="Assign birthright permissions">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CreateJiraTicket" name="Create JIRA Onboarding Master Ticket">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_StartJiraWorkflow" name="Initiate IT onboarding workflow in JIRA">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_ParallelSplit" name="Start parallel fulfillment">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_AssignPhoneNumber" name="Assign telephone number via KIRA">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_RequestNotebook" name="Request notebook for new employee">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_ParallelJoin" name="Fulfillment complete">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="EndEvent_OnboardingComplete" name="Onboarding completed">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_NewHire" targetRef="Task_CreateWorker"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_CreateWorker" targetRef="Task_MaintainDetails"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_MaintainDetails" targetRef="Task_CreateIdentity"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_CreateIdentity" targetRef="Task_CreateAccounts"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_CreateAccounts" targetRef="Task_AssignBirthright"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_AssignBirthright" targetRef="Task_CreateJiraTicket"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_CreateJiraTicket" targetRef="Task_StartJiraWorkflow"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_StartJiraWorkflow" targetRef="Gateway_ParallelSplit"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_ParallelSplit" targetRef="Task_AssignPhoneNumber"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_ParallelSplit" targetRef="Task_RequestNotebook"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_AssignPhoneNumber" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_RequestNotebook" targetRef="Gateway_ParallelJoin"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gateway_ParallelJoin" targetRef="EndEvent_OnboardingComplete"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_EmployeeOnboarding">
+      <bpmndi:BPMNShape id="Lane_HR_di" bpmnElement="Lane_HR" isHorizontal="true">
+        <dc:Bounds x="80" y="80" width="1600" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_IAM_di" bpmnElement="Lane_IAM" isHorizontal="true">
+        <dc:Bounds x="80" y="220" width="1600" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_IT_di" bpmnElement="Lane_IT" isHorizontal="true">
+        <dc:Bounds x="80" y="360" width="1600" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_KIRA_di" bpmnElement="Lane_KIRA" isHorizontal="true">
+        <dc:Bounds x="80" y="500" width="1600" height="140"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_NewHire_di" bpmnElement="StartEvent_NewHire">
+        <dc:Bounds x="140" y="132" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateWorker_di" bpmnElement="Task_CreateWorker">
+        <dc:Bounds x="220" y="110" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MaintainDetails_di" bpmnElement="Task_MaintainDetails">
+        <dc:Bounds x="420" y="110" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateIdentity_di" bpmnElement="Task_CreateIdentity">
+        <dc:Bounds x="640" y="250" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateAccounts_di" bpmnElement="Task_CreateAccounts">
+        <dc:Bounds x="860" y="250" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AssignBirthright_di" bpmnElement="Task_AssignBirthright">
+        <dc:Bounds x="1060" y="250" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateJiraTicket_di" bpmnElement="Task_CreateJiraTicket">
+        <dc:Bounds x="1280" y="250" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StartJiraWorkflow_di" bpmnElement="Task_StartJiraWorkflow">
+        <dc:Bounds x="1280" y="390" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ParallelSplit_di" bpmnElement="Gateway_ParallelSplit" isMarkerVisible="true">
+        <dc:Bounds x="1520" y="405" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestNotebook_di" bpmnElement="Task_RequestNotebook">
+        <dc:Bounds x="1620" y="390" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AssignPhoneNumber_di" bpmnElement="Task_AssignPhoneNumber">
+        <dc:Bounds x="1620" y="530" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ParallelJoin_di" bpmnElement="Gateway_ParallelJoin" isMarkerVisible="true">
+        <dc:Bounds x="1860" y="475" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_OnboardingComplete_di" bpmnElement="EndEvent_OnboardingComplete">
+        <dc:Bounds x="1980" y="482" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="176" y="150"/>
+        <di:waypoint x="220" y="150"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="360" y="150"/>
+        <di:waypoint x="420" y="150"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="580" y="150"/>
+        <di:waypoint x="610" y="150"/>
+        <di:waypoint x="610" y="290"/>
+        <di:waypoint x="640" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="800" y="290"/>
+        <di:waypoint x="860" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1000" y="290"/>
+        <di:waypoint x="1060" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1220" y="290"/>
+        <di:waypoint x="1280" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1370" y="330"/>
+        <di:waypoint x="1370" y="390"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
+        <di:waypoint x="1460" y="430"/>
+        <di:waypoint x="1520" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9">
+        <di:waypoint x="1545" y="455"/>
+        <di:waypoint x="1545" y="570"/>
+        <di:waypoint x="1620" y="570"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="1570" y="430"/>
+        <di:waypoint x="1620" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
+        <di:waypoint x="1800" y="570"/>
+        <di:waypoint x="1830" y="570"/>
+        <di:waypoint x="1830" y="500"/>
+        <di:waypoint x="1860" y="500"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12">
+        <di:waypoint x="1780" y="430"/>
+        <di:waypoint x="1885" y="430"/>
+        <di:waypoint x="1885" y="475"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13">
+        <di:waypoint x="1910" y="500"/>
+        <di:waypoint x="1980" y="500"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
